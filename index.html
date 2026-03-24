@@ -6,7 +6,7 @@
     <title>Work Tracker Pro</title>
     <style>
         body { font-family: sans-serif; background: #f0f2f5; padding: 20px; display: flex; flex-direction: column; align-items: center; }
-        .container { display: flex; flex-wrap: wrap; gap: 20px; justify-content: center; max-width: 1000px; width: 100%; }
+        .container { display: flex; flex-wrap: wrap; gap: 20px; justify-content: center; max-width: 1100px; width: 100%; }
         .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); flex: 1; min-width: 320px; }
         h2 { color: #1a73e8; margin-top: 0; }
         .input-group { margin-bottom: 15px; }
@@ -19,9 +19,10 @@
         .btn-save { background: #1a73e8; color: white; }
         .btn-edit { background: #ffc107; width: auto; padding: 5px 10px; margin: 0; font-size: 12px; }
         .btn-del { background: #dc3545; color: white; width: auto; padding: 5px 10px; margin: 0; font-size: 12px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 14px; }
-        th, td { text-align: left; padding: 10px; border-bottom: 1px solid #eee; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 13px; }
+        th, td { text-align: left; padding: 8px; border-bottom: 1px solid #eee; }
         .grand-total { text-align: right; font-weight: bold; margin-top: 15px; font-size: 1.2rem; color: #1a73e8; }
+        .info-text { font-size: 0.85rem; color: #666; font-style: italic; }
     </style>
 </head>
 <body>
@@ -35,8 +36,9 @@
         <div class="input-group"><label>Clock Out</label><input type="time" id="tOut" oninput="doMath()"></div>
         
         <div class="results">
-            <div class="row"><span>Work Hours (Excl. Lunch):</span> <span id="resHours">0.00</span></div>
+            <div class="row"><span>Total Hours (Whole):</span> <span id="resHours">0</span></div>
             <div class="row"><span>Fixed Allowance:</span> <span>₱350.00</span></div>
+            <p class="info-text">*Allowance is displayed but not included in total</p>
             <div class="row total-row"><span>Daily Total:</span> <span id="resTotal">₱0.00</span></div>
         </div>
         <button class="btn-save" id="mainBtn" onclick="saveData()">Save to History</button>
@@ -47,7 +49,15 @@
         <h2>History</h2>
         <div style="overflow-x:auto;">
             <table>
-                <thead><tr><th>Date</th><th>Hrs</th><th>Total</th><th></th></tr></thead>
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>In/Out</th>
+                        <th>Hrs</th>
+                        <th>Total</th>
+                        <th></th>
+                    </tr>
+                </thead>
                 <tbody id="tableBody"></tbody>
             </table>
         </div>
@@ -56,7 +66,6 @@
 </div>
 
 <script>
-    // Set today's date automatically
     document.getElementById('workDate').valueAsDate = new Date();
 
     function doMath() {
@@ -69,14 +78,20 @@
         
         let start = h1 + (m1/60);
         let end = h2 + (m2/60);
-        if (end < start) end += 24; // Over midnight
+        if (end < start) end += 24; 
 
-        const hoursWorked = Math.max(0, (end - start) - 1); // Less 1hr lunch
-        const regPay = Math.min(8, hoursWorked) * 100.96;
-        const otPay = Math.max(0, hoursWorked - 8) * (100.96 * 1.25);
-        const totalPay = hoursWorked > 0 ? (regPay + otPay + 350) : 0;
+        // 1. Calculation: Whole numbers for hours worked (subtracting 1hr lunch)
+        let hoursWorked = Math.floor(Math.max(0, (end - start) - 1)); 
+        
+        // 2. Daily Rate logic (807.69 for 8 hours)
+        const hourlyRate = 807.69 / 8;
+        const regPay = Math.min(8, hoursWorked) * hourlyRate;
+        const otPay = Math.max(0, hoursWorked - 8) * (hourlyRate * 1.25);
+        
+        // 3. Total: Meal allowance (350) is NOT included in computation
+        const totalPay = hoursWorked > 0 ? (regPay + otPay) : 0;
 
-        document.getElementById('resHours').innerText = hoursWorked.toFixed(2) + " hrs";
+        document.getElementById('resHours').innerText = hoursWorked + " hrs";
         document.getElementById('resTotal').innerText = "₱" + totalPay.toLocaleString(undefined, {minimumFractionDigits:2});
         
         return { 
@@ -91,7 +106,7 @@
     function saveData() {
         const currentData = doMath();
         if (!currentData || currentData.hours === 0) {
-            alert("Please enter valid work times!");
+            alert("Please enter valid work times! (Must be over 1 hour to account for lunch)");
             return;
         }
 
@@ -119,7 +134,8 @@
             sum += item.total;
             body.innerHTML += `<tr>
                 <td>${item.date}</td>
-                <td>${item.hours.toFixed(1)}</td>
+                <td><small>${item.in} - ${item.out}</small></td>
+                <td>${item.hours}</td>
                 <td>₱${item.total.toFixed(2)}</td>
                 <td>
                     <button class="btn-edit" onclick="startEdit(${index})">Edit</button>
@@ -161,7 +177,7 @@
         document.getElementById('cancelBtn').style.display = "none";
         document.getElementById('tIn').value = "";
         document.getElementById('tOut').value = "";
-        document.getElementById('resHours').innerText = "0.00";
+        document.getElementById('resHours').innerText = "0";
         document.getElementById('resTotal').innerText = "₱0.00";
     }
 
