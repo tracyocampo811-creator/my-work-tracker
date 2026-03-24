@@ -22,7 +22,7 @@
         table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 13px; }
         th, td { text-align: left; padding: 8px; border-bottom: 1px solid #eee; }
         .grand-total { text-align: right; font-weight: bold; margin-top: 15px; font-size: 1.2rem; color: #1a73e8; }
-        .info-text { font-size: 0.85rem; color: #666; font-style: italic; }
+        .info-text { font-size: 0.85rem; color: #666; font-style: italic; margin: 5px 0; }
     </style>
 </head>
 <body>
@@ -37,8 +37,10 @@
         
         <div class="results">
             <div class="row"><span>Total Hours (Whole):</span> <span id="resHours">0</span></div>
-            <div class="row"><span>Fixed Allowance:</span> <span>₱350.00</span></div>
-            <p class="info-text">*Allowance is displayed but not included in total</p>
+            <div class="row"><span>Daily Rate (8hrs):</span> <span>₱807.69</span></div>
+            <div class="row"><span>Meal Allowance:</span> <span>₱350.00</span></div>
+            <p class="info-text">*Allowance not included in total</p>
+            <p class="info-text">*OT Rate: 130% after 8 hours</p>
             <div class="row total-row"><span>Daily Total:</span> <span id="resTotal">₱0.00</span></div>
         </div>
         <button class="btn-save" id="mainBtn" onclick="saveData()">Save to History</button>
@@ -52,7 +54,7 @@
                 <thead>
                     <tr>
                         <th>Date</th>
-                        <th>In/Out</th>
+                        <th>Shift</th>
                         <th>Hrs</th>
                         <th>Total</th>
                         <th></th>
@@ -80,16 +82,27 @@
         let end = h2 + (m2/60);
         if (end < start) end += 24; 
 
-        // 1. Calculation: Whole numbers for hours worked (subtracting 1hr lunch)
+        // Calculation: Whole numbers for hours worked (subtracting 1hr lunch)
         let hoursWorked = Math.floor(Math.max(0, (end - start) - 1)); 
         
-        // 2. Daily Rate logic (807.69 for 8 hours)
-        const hourlyRate = 807.69 / 8;
-        const regPay = Math.min(8, hoursWorked) * hourlyRate;
-        const otPay = Math.max(0, hoursWorked - 8) * (hourlyRate * 1.25);
+        const dailyRate = 807.69;
+        const hourlyRate = dailyRate / 8;
         
-        // 3. Total: Meal allowance (350) is NOT included in computation
-        const totalPay = hoursWorked > 0 ? (regPay + otPay) : 0;
+        let regPay = 0;
+        let otPay = 0;
+
+        if (hoursWorked > 0) {
+            // Standard pay for the first 8 hours
+            regPay = Math.min(8, hoursWorked) * hourlyRate;
+            
+            // OT pay: 130% for hours exceeding 8
+            if (hoursWorked > 8) {
+                const otHours = hoursWorked - 8;
+                otPay = otHours * (hourlyRate * 1.30);
+            }
+        }
+        
+        const totalPay = regPay + otPay;
 
         document.getElementById('resHours').innerText = hoursWorked + " hrs";
         document.getElementById('resTotal').innerText = "₱" + totalPay.toLocaleString(undefined, {minimumFractionDigits:2});
@@ -106,7 +119,7 @@
     function saveData() {
         const currentData = doMath();
         if (!currentData || currentData.hours === 0) {
-            alert("Please enter valid work times! (Must be over 1 hour to account for lunch)");
+            alert("Please enter valid work times! (Minimum 1 hour to deduct lunch)");
             return;
         }
 
