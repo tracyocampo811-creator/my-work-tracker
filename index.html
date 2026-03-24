@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Work & Salary Tracker</title>
+    <title>Work & Salary Tracker Pro</title>
     <style>
         body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; display: flex; flex-direction: column; align-items: center; padding: 20px; }
-        .container { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; max-width: 1000px; width: 100%; }
+        .container { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; max-width: 1100px; width: 100%; }
         .card { background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
         h2, h3 { color: #1a73e8; margin-top: 0; }
         .input-group { margin-bottom: 12px; }
@@ -17,120 +17,22 @@
         .total { font-size: 1.1rem; font-weight: bold; color: #2e7d32; border-top: 1px solid #eee; padding-top: 8px; margin-top: 8px; }
         button { width: 100%; padding: 12px; background: #1a73e8; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; margin-top: 10px; }
         button:hover { background: #1557b0; }
+        .edit-btn { background: #ffc107; color: #000; padding: 4px 8px; font-size: 11px; margin-right: 4px; width: auto; }
+        .del-btn { background: #dc3545; color: white; padding: 4px 8px; font-size: 11px; width: auto; }
         .secondary-btn { background: #6c757d; font-size: 0.85rem; }
-        .clear-btn { background: #dc3545; font-size: 0.8rem; }
         table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.85rem; }
         th { text-align: left; background: #f8f9fa; padding: 8px; border-bottom: 2px solid #eee; }
         td { padding: 8px; border-bottom: 1px solid #eee; }
         .summary-footer { margin-top: 15px; font-weight: bold; text-align: right; color: #1a73e8; font-size: 1.1rem; }
-        @media (max-width: 768px) { .container { grid-template-columns: 1fr; } }
+        @media (max-width: 850px) { .container { grid-template-columns: 1fr; } }
     </style>
 </head>
 <body>
 
 <div class="container">
     <div class="card">
-        <h2>Shift Entry</h2>
+        <h2 id="entryTitle">New Shift Entry</h2>
+        <input type="hidden" id="editIndex" value="-1">
         <div class="input-group"><label>Date</label><input type="date" id="workDate"></div>
         <div class="input-group"><label>Clock In</label><input type="time" id="timeIn" oninput="calculate()"></div>
-        <div class="input-group"><label>Clock Out</label><input type="time" id="timeOut" oninput="calculate()"></div>
-
-        <div class="result-box">
-            <div class="stat"><span>Work Hours (Excl. Lunch):</span> <span id="netHours">0.00 hrs</span></div>
-            <div class="stat"><span>Hourly Pay (Max 8hrs):</span> <span id="regPay">₱0.00</span></div>
-            <div class="stat"><span>OT Pay (1.25x):</span> <span id="otPay">₱0.00</span></div>
-            <div class="stat"><span>Daily Allowance:</span> <span>₱350.00</span></div>
-            <div class="stat total"><span>Daily Total:</span> <span id="totalSalary">₱0.00</span></div>
-        </div>
-        <button onclick="saveEntry()">Save to History</button>
-    </div>
-
-    <div class="card">
-        <h3>Work History</h3>
-        <div style="overflow-x: auto; max-height: 400px;">
-            <table id="historyTable">
-                <thead><tr><th>Date</th><th>Hours</th><th>Daily Total</th></tr></thead>
-                <tbody id="historyBody"></tbody>
-            </table>
-        </div>
-        <div class="summary-footer" id="grandTotal">Grand Total: ₱0.00</div>
-        <button class="secondary-btn" onclick="exportCSV()">Download CSV</button>
-        <button class="clear-btn" onclick="clearHistory()">Clear All Logs</button>
-    </div>
-</div>
-
-<script>
-    document.getElementById('workDate').valueAsDate = new Date();
-    const HOURLY_RATE = 100.96;
-    const DAILY_RATE = 807.69;
-    const ALLOWANCE = 350.00;
-
-    function calculate() {
-        const tIn = document.getElementById('timeIn').value;
-        const tOut = document.getElementById('timeOut').value;
-        if (!tIn || !tOut) return null;
-        
-        const [h1, m1] = tIn.split(':').map(Number);
-        const [h2, m2] = tOut.split(':').map(Number);
-        let start = h1 + m1/60, end = h2 + m2/60;
-        if (end < start) end += 24;
-        
-        // Subtract 1 hour for lunch
-        const netHours = Math.max(0, (end - start) - 1);
-        
-        let reg = netHours <= 8 ? netHours * HOURLY_RATE : DAILY_RATE;
-        let ot = netHours > 8 ? (netHours - 8) * (HOURLY_RATE * 1.25) : 0;
-        
-        // Add 350 fixed allowance if any time is worked
-        let total = netHours > 0 ? (reg + ot + ALLOWANCE) : 0;
-
-        document.getElementById('netHours').innerText = netHours.toFixed(2) + " hrs";
-        document.getElementById('regPay').innerText = "₱" + reg.toFixed(2);
-        document.getElementById('otPay').innerText = "₱" + ot.toFixed(2);
-        document.getElementById('totalSalary').innerText = "₱" + total.toFixed(2);
-        
-        return { date: document.getElementById('workDate').value, hours: netHours, total: total };
-    }
-
-    function saveEntry() {
-        const data = calculate();
-        if (!data || data.hours === 0) return alert("Please enter a valid work shift!");
-        let history = JSON.parse(localStorage.getItem('workLogs')) || [];
-        history.push(data);
-        localStorage.setItem('workLogs', JSON.stringify(history));
-        renderHistory();
-        alert("Shift saved!");
-    }
-
-    function renderHistory() {
-        const history = JSON.parse(localStorage.getItem('workLogs')) || [];
-        const body = document.getElementById('historyBody');
-        let grandTotal = 0; 
-        body.innerHTML = "";
-        
-        history.sort((a, b) => new Date(b.date) - new Date(a.date)); // Sort by newest date
-        
-        history.forEach(e => {
-            grandTotal += e.total;
-            body.innerHTML += `<tr><td>${e.date}</td><td>${e.hours.toFixed(2)}</td><td>₱${e.total.toLocaleString(undefined, {minimumFractionDigits: 2})}</td></tr>`;
-        });
-        document.getElementById('grandTotal').innerText = "Grand Total: ₱" + grandTotal.toLocaleString(undefined, {minimumFractionDigits: 2});
-    }
-
-    function exportCSV() {
-        const history = JSON.parse(localStorage.getItem('workLogs')) || [];
-        let csv = "Date,Hours,Total Pay (Incl Allowance)\n";
-        history.forEach(e => csv += `${e.date},${e.hours.toFixed(2)},${e.total.toFixed(2)}\n`);
-        const blob = new Blob([csv], { type: 'text/csv' });
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'payroll_report.csv';
-        a.click();
-    }
-
-    function clearHistory() { if(confirm("This will permanently delete your work history. Continue?")) { localStorage.removeItem('workLogs'); renderHistory(); } }
-    renderHistory();
-</script>
-</body>
-</html>
+        <div class="input-group"><label
