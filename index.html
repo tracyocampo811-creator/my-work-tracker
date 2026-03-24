@@ -3,36 +3,170 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Work & Salary Tracker Pro</title>
+    <title>Work Tracker Pro</title>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; display: flex; flex-direction: column; align-items: center; padding: 20px; }
-        .container { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; max-width: 1100px; width: 100%; }
-        .card { background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
-        h2, h3 { color: #1a73e8; margin-top: 0; }
-        .input-group { margin-bottom: 12px; }
-        label { display: block; margin-bottom: 4px; font-weight: 600; color: #444; font-size: 0.9rem; }
-        input { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 1rem; box-sizing: border-box; }
-        .result-box { background: #f8f9fa; padding: 15px; border-radius: 8px; margin-top: 15px; border-left: 4px solid #1a73e8; }
-        .stat { display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 0.9rem; }
-        .total { font-size: 1.1rem; font-weight: bold; color: #2e7d32; border-top: 1px solid #eee; padding-top: 8px; margin-top: 8px; }
-        button { width: 100%; padding: 12px; background: #1a73e8; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; margin-top: 10px; }
-        button:hover { background: #1557b0; }
-        .edit-btn { background: #ffc107; color: #000; padding: 4px 8px; font-size: 11px; margin-right: 4px; width: auto; }
-        .del-btn { background: #dc3545; color: white; padding: 4px 8px; font-size: 11px; width: auto; }
-        .secondary-btn { background: #6c757d; font-size: 0.85rem; }
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.85rem; }
-        th { text-align: left; background: #f8f9fa; padding: 8px; border-bottom: 2px solid #eee; }
-        td { padding: 8px; border-bottom: 1px solid #eee; }
-        .summary-footer { margin-top: 15px; font-weight: bold; text-align: right; color: #1a73e8; font-size: 1.1rem; }
-        @media (max-width: 850px) { .container { grid-template-columns: 1fr; } }
+        body { font-family: sans-serif; background: #f0f2f5; padding: 20px; display: flex; flex-direction: column; align-items: center; }
+        .container { display: flex; flex-wrap: wrap; gap: 20px; justify-content: center; max-width: 1000px; width: 100%; }
+        .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); flex: 1; min-width: 320px; }
+        h2 { color: #1a73e8; margin-top: 0; }
+        .input-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        input { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; font-size: 16px; }
+        .results { background: #f8f9fa; padding: 15px; border-radius: 8px; margin-top: 15px; border-left: 5px solid #1a73e8; }
+        .row { display: flex; justify-content: space-between; margin-bottom: 8px; }
+        .total-row { font-weight: bold; color: #2e7d32; border-top: 1px solid #ddd; padding-top: 10px; font-size: 1.2rem; }
+        button { width: 100%; padding: 12px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; margin-top: 10px; font-size: 16px; }
+        .btn-save { background: #1a73e8; color: white; }
+        .btn-edit { background: #ffc107; width: auto; padding: 5px 10px; margin: 0; font-size: 12px; }
+        .btn-del { background: #dc3545; color: white; width: auto; padding: 5px 10px; margin: 0; font-size: 12px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 14px; }
+        th, td { text-align: left; padding: 10px; border-bottom: 1px solid #eee; }
+        .grand-total { text-align: right; font-weight: bold; margin-top: 15px; font-size: 1.2rem; color: #1a73e8; }
     </style>
 </head>
 <body>
 
 <div class="container">
     <div class="card">
-        <h2 id="entryTitle">New Shift Entry</h2>
+        <h2 id="formTitle">New Entry</h2>
         <input type="hidden" id="editIndex" value="-1">
         <div class="input-group"><label>Date</label><input type="date" id="workDate"></div>
-        <div class="input-group"><label>Clock In</label><input type="time" id="timeIn" oninput="calculate()"></div>
-        <div class="input-group"><label
+        <div class="input-group"><label>Clock In</label><input type="time" id="tIn" oninput="doMath()"></div>
+        <div class="input-group"><label>Clock Out</label><input type="time" id="tOut" oninput="doMath()"></div>
+        
+        <div class="results">
+            <div class="row"><span>Work Hours (Excl. Lunch):</span> <span id="resHours">0.00</span></div>
+            <div class="row"><span>Fixed Allowance:</span> <span>₱350.00</span></div>
+            <div class="row total-row"><span>Daily Total:</span> <span id="resTotal">₱0.00</span></div>
+        </div>
+        <button class="btn-save" id="mainBtn" onclick="saveData()">Save to History</button>
+        <button id="cancelBtn" style="display:none; background:#6c757d; color:white;" onclick="resetForm()">Cancel Edit</button>
+    </div>
+
+    <div class="card">
+        <h2>History</h2>
+        <div style="overflow-x:auto;">
+            <table>
+                <thead><tr><th>Date</th><th>Hrs</th><th>Total</th><th></th></tr></thead>
+                <tbody id="tableBody"></tbody>
+            </table>
+        </div>
+        <div class="grand-total" id="overallSum">Grand Total: ₱0.00</div>
+    </div>
+</div>
+
+<script>
+    // Set today's date automatically
+    document.getElementById('workDate').valueAsDate = new Date();
+
+    function doMath() {
+        const timeIn = document.getElementById('tIn').value;
+        const timeOut = document.getElementById('tOut').value;
+        if (!timeIn || !timeOut) return null;
+
+        const [h1, m1] = timeIn.split(':').map(Number);
+        const [h2, m2] = timeOut.split(':').map(Number);
+        
+        let start = h1 + (m1/60);
+        let end = h2 + (m2/60);
+        if (end < start) end += 24; // Over midnight
+
+        const hoursWorked = Math.max(0, (end - start) - 1); // Less 1hr lunch
+        const regPay = Math.min(8, hoursWorked) * 100.96;
+        const otPay = Math.max(0, hoursWorked - 8) * (100.96 * 1.25);
+        const totalPay = hoursWorked > 0 ? (regPay + otPay + 350) : 0;
+
+        document.getElementById('resHours').innerText = hoursWorked.toFixed(2) + " hrs";
+        document.getElementById('resTotal').innerText = "₱" + totalPay.toLocaleString(undefined, {minimumFractionDigits:2});
+        
+        return { 
+            date: document.getElementById('workDate').value,
+            hours: hoursWorked, 
+            total: totalPay,
+            in: timeIn,
+            out: timeOut
+        };
+    }
+
+    function saveData() {
+        const currentData = doMath();
+        if (!currentData || currentData.hours === 0) {
+            alert("Please enter valid work times!");
+            return;
+        }
+
+        let logs = JSON.parse(localStorage.getItem('myWorkLogs')) || [];
+        const editIdx = parseInt(document.getElementById('editIndex').value);
+
+        if (editIdx > -1) {
+            logs[editIdx] = currentData;
+        } else {
+            logs.push(currentData);
+        }
+
+        localStorage.setItem('myWorkLogs', JSON.stringify(logs));
+        resetForm();
+        showLogs();
+    }
+
+    function showLogs() {
+        const logs = JSON.parse(localStorage.getItem('myWorkLogs')) || [];
+        const body = document.getElementById('tableBody');
+        let sum = 0;
+        body.innerHTML = "";
+
+        logs.forEach((item, index) => {
+            sum += item.total;
+            body.innerHTML += `<tr>
+                <td>${item.date}</td>
+                <td>${item.hours.toFixed(1)}</td>
+                <td>₱${item.total.toFixed(2)}</td>
+                <td>
+                    <button class="btn-edit" onclick="startEdit(${index})">Edit</button>
+                    <button class="btn-del" onclick="deleteLog(${index})">X</button>
+                </td>
+            </tr>`;
+        });
+        document.getElementById('overallSum').innerText = "Grand Total: ₱" + sum.toLocaleString(undefined, {minimumFractionDigits:2});
+    }
+
+    function startEdit(idx) {
+        const logs = JSON.parse(localStorage.getItem('myWorkLogs'));
+        const entry = logs[idx];
+        
+        document.getElementById('workDate').value = entry.date;
+        document.getElementById('tIn').value = entry.in;
+        document.getElementById('tOut').value = entry.out;
+        document.getElementById('editIndex').value = idx;
+        
+        document.getElementById('formTitle').innerText = "Editing...";
+        document.getElementById('mainBtn').innerText = "Update Entry";
+        document.getElementById('cancelBtn').style.display = "block";
+        doMath();
+    }
+
+    function deleteLog(idx) {
+        if (confirm("Delete this entry?")) {
+            let logs = JSON.parse(localStorage.getItem('myWorkLogs'));
+            logs.splice(idx, 1);
+            localStorage.setItem('myWorkLogs', JSON.stringify(logs));
+            showLogs();
+        }
+    }
+
+    function resetForm() {
+        document.getElementById('editIndex').value = "-1";
+        document.getElementById('formTitle').innerText = "New Entry";
+        document.getElementById('mainBtn').innerText = "Save to History";
+        document.getElementById('cancelBtn').style.display = "none";
+        document.getElementById('tIn').value = "";
+        document.getElementById('tOut').value = "";
+        document.getElementById('resHours').innerText = "0.00";
+        document.getElementById('resTotal').innerText = "₱0.00";
+    }
+
+    showLogs();
+</script>
+
+</body>
+</html>
